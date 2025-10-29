@@ -1,9 +1,5 @@
 from .basic_import import *
 from models.tags import Tag
-from typing import List, Optional
-from fastapi import Body
-import bcrypt
-from pydantic import BaseModel
 
 
 router = APIRouter()
@@ -12,7 +8,7 @@ class PostTagRequest(BaseModel):
     name: str
 
 @router.post("/create-tag/")
-async def create_tag(tags: PostTagRequest, db: Session = Depends(db_dependency)):
+async def create_tag(tags: PostTagRequest, db: Session = Depends(db_dependency), current_user: User = Depends(get_current_user)):
     try:
         new_tag = Tag(
         name=tags.name,
@@ -25,12 +21,12 @@ async def create_tag(tags: PostTagRequest, db: Session = Depends(db_dependency))
         raise HTTPException(status_code=500, detail=str(e))
     
 @router.get("/get-all-tags/")
-async def get_all_tags(db: Session = Depends(db_dependency)):
+async def get_all_tags(db: Session = Depends(db_dependency), current_user: User = Depends(get_current_user)):
     data = db.query(Tag).all()
     return jsonable_encoder(data)        
     
 @router.get("/tag-by-id/{tag_id}")
-async def get_tag_by_id(tag_id: int, db: Session = Depends(db_dependency)):
+async def get_tag_by_id(tag_id: int, db: Session = Depends(db_dependency), current_user: User = Depends(get_current_user)):
     tag = (
         db.query(Tag).filter(Tag.id == tag_id).first())
     if not tag:
@@ -42,7 +38,7 @@ async def get_tag_by_id(tag_id: int, db: Session = Depends(db_dependency)):
     }
 
 @router.delete("/delete-tag/{tag_id}")
-async def delete_tag(tag_id: int, db: Session = Depends(db_dependency)):
+async def delete_tag(tag_id: int, db: Session = Depends(db_dependency), current_user: User = Depends(get_current_user)):
     try:
         tag = db.query(Tag).filter(Tag.id == tag_id).first()
         if not tag:
@@ -55,7 +51,7 @@ async def delete_tag(tag_id: int, db: Session = Depends(db_dependency)):
 
 
 @router.put("/update-tag/{tag_id}/")
-async def update_tag(tag_id: int, request: PostTagRequest, db: Session = Depends(db_dependency)):
+async def update_tag(tag_id: int, request: PostTagRequest, db: Session = Depends(db_dependency), current_user: User = Depends(get_current_user)):
     try:    
         tag = db.query(Tag).filter(Tag.id == tag_id).first()
         if not tag:

@@ -2,10 +2,6 @@ from .basic_import import *
 from models.posts import Post
 from models.tags import Tag
 from models.post_tags import Post_tag
-from typing import List, Optional
-from fastapi import Body
-import bcrypt
-from pydantic import BaseModel
 from router.notification import notify_new_post
 
 router = APIRouter()
@@ -27,7 +23,7 @@ class UpdatePostRequest(BaseModel):
     tag_names: List[str] = []  
 
 @router.post("/create-post/")
-async def create_post(post: CreatePostRequest, db: Session = Depends(db_dependency)):
+async def create_post(post: CreatePostRequest, db: Session = Depends(db_dependency), current_user: User = Depends(get_current_user)):
     try:
         new_post = Post(
         title=post.title,
@@ -59,7 +55,7 @@ async def create_post(post: CreatePostRequest, db: Session = Depends(db_dependen
         raise HTTPException(status_code=500, detail=str(e))
     
 @router.get("/get-all-posts/")
-async def get_all_posts(db: Session = Depends(db_dependency)):
+async def get_all_posts(db: Session = Depends(db_dependency), current_user: User = Depends(get_current_user)):
     posts = db.query(Post).all()
     result = []
 
@@ -82,7 +78,7 @@ async def get_all_posts(db: Session = Depends(db_dependency)):
      
     
 @router.get("/posts-by-id/{post_id}")
-async def get_post(post_id: int, db: Session = Depends(db_dependency)):
+async def get_post(post_id: int, db: Session = Depends(db_dependency), current_user: User = Depends(get_current_user)):
     post = (
         db.query(Post).filter(Post.id == post_id).first())
     if not post:
@@ -103,7 +99,7 @@ async def get_post(post_id: int, db: Session = Depends(db_dependency)):
         "updated_at": post.updated_at,
     }
 @router.delete("/delete-post/{post_id}")
-async def delete_post(post_id: int, db: Session = Depends(db_dependency)):
+async def delete_post(post_id: int, db: Session = Depends(db_dependency), current_user: User = Depends(get_current_user)):
     try:
         post = db.query(Post).filter(Post.id == post_id).first()
         if not post:
@@ -116,7 +112,7 @@ async def delete_post(post_id: int, db: Session = Depends(db_dependency)):
 
 
 @router.put("/update-post/{post_id}/")
-async def update_post(post_id: int, request: UpdatePostRequest, db: Session = Depends(db_dependency)):
+async def update_post(post_id: int, request: UpdatePostRequest, db: Session = Depends(db_dependency), current_user: User = Depends(get_current_user)):
     try:    
         post = db.query(Post).filter(Post.id == post_id).first()
         if not post:

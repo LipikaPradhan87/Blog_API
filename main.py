@@ -1,5 +1,5 @@
 from fastapi.middleware.cors import CORSMiddleware
-from router import users,login, post, categories, tags, post_tags, comments, likes, notification
+from router import users,login, post, categories, tags, post_tags, comments, likes, notification, auth_routes
 from fastapi import FastAPI, Request
 import os
 from datetime import datetime, timedelta
@@ -18,6 +18,11 @@ app.add_middleware(
 async def home():
     return {"message": "Welcome to ThoughtNest API"}
 
+app.include_router(
+    auth_routes.router,
+    prefix="/Auth",
+    tags=["Auth"]
+)
 app.include_router(
     users.router,
     prefix="/Users",

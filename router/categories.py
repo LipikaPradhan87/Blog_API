@@ -1,9 +1,6 @@
 from .basic_import import *
 from models.categories import Category
-from typing import List, Optional
-from fastapi import Body
-import bcrypt
-from pydantic import BaseModel
+
 
 
 router = APIRouter()
@@ -19,7 +16,7 @@ class UpdateCategoryRequest(BaseModel):
     image: Optional[str] = None
 
 @router.post("/create-category/")
-async def create_category(category: CreateCategoryRequest, db: Session = Depends(db_dependency)):
+async def create_category(category: CreateCategoryRequest, db: Session = Depends(db_dependency), current_user: User = Depends(get_current_user)):
     try:
         new_categry = Category(
         name=category.name,
@@ -34,12 +31,12 @@ async def create_category(category: CreateCategoryRequest, db: Session = Depends
         raise HTTPException(status_code=500, detail=str(e))
     
 @router.get("/get-all-categories/")
-async def get_all_categories(db: Session = Depends(db_dependency)):
+async def get_all_categories(db: Session = Depends(db_dependency), current_user: User = Depends(get_current_user)):
     data = db.query(Category).all()
     return jsonable_encoder(data)        
     
 @router.get("/category-by-id/{category_id}")
-async def get_category_by_id(category_id: int, db: Session = Depends(db_dependency)):
+async def get_category_by_id(category_id: int, db: Session = Depends(db_dependency), current_user: User = Depends(get_current_user)):
     categ = (
         db.query(Category).filter(Category.id == category_id).first())
     if not categ:
@@ -53,7 +50,7 @@ async def get_category_by_id(category_id: int, db: Session = Depends(db_dependen
     }
 
 @router.delete("/delete-category/{category_id}")
-async def delete_category(category_id: int, db: Session = Depends(db_dependency)):
+async def delete_category(category_id: int, db: Session = Depends(db_dependency), current_user: User = Depends(get_current_user)):
     try:
         categ = db.query(Category).filter(Category.id == category_id).first()
         if not categ:
@@ -66,7 +63,7 @@ async def delete_category(category_id: int, db: Session = Depends(db_dependency)
 
 
 @router.put("/update-category/{category_id}/")
-async def update_category(category_id: int, request: UpdateCategoryRequest, db: Session = Depends(db_dependency)):
+async def update_category(category_id: int, request: UpdateCategoryRequest, db: Session = Depends(db_dependency), current_user: User = Depends(get_current_user)):
     try:    
         category = db.query(Category).filter(Category.id == category_id).first()
         if not category:

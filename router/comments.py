@@ -1,10 +1,6 @@
 from .basic_import import *
 from models.comments import Comment
 from models.posts import Post
-from typing import List, Optional
-from fastapi import Body
-import bcrypt
-from pydantic import BaseModel
 from router.notification import notify_comment
 
 router = APIRouter()
@@ -18,7 +14,7 @@ class UpdateCommentRequest(BaseModel):
 
 
 @router.post("/posts/{post_id}/comments/")
-async def add_comment(post_id: int, request: PostCommentRequest, db: Session = Depends(db_dependency)):
+async def add_comment(post_id: int, request: PostCommentRequest, db: Session = Depends(db_dependency), current_user: User = Depends(get_current_user)):
     post = db.query(Post).filter(Post.id == post_id).first()
     if not post:
         raise HTTPException(status_code=404, detail="Post not found")
@@ -35,7 +31,7 @@ async def add_comment(post_id: int, request: PostCommentRequest, db: Session = D
     return {"message": "Comment added successfully", "comment_id": comment.id}
     
 @router.get("/posts/{post_id}/comments/")
-async def get_comments(post_id: int, db: Session = Depends(db_dependency)):
+async def get_comments(post_id: int, db: Session = Depends(db_dependency), current_user: User = Depends(get_current_user)):
     post = db.query(Post).filter(Post.id == post_id).first()
     if not post:
         raise HTTPException(status_code=404, detail="Post not found")
@@ -52,7 +48,7 @@ async def get_comments(post_id: int, db: Session = Depends(db_dependency)):
     ]   
     
 @router.put("/comments/{comment_id}/")
-async def update_comment(comment_id: int, request: UpdateCommentRequest, db: Session = Depends(db_dependency)):
+async def update_comment(comment_id: int, request: UpdateCommentRequest, db: Session = Depends(db_dependency), current_user: User = Depends(get_current_user)):
     comment = db.query(Comment).filter(Comment.id == comment_id).first()
     if not comment:
         raise HTTPException(status_code=404, detail="Comment not found")
@@ -69,7 +65,7 @@ async def update_comment(comment_id: int, request: UpdateCommentRequest, db: Ses
 # Delete comment
 # ===============================
 @router.delete("/comments/{comment_id}/")
-async def delete_comment(comment_id: int, db: Session = Depends(db_dependency)):
+async def delete_comment(comment_id: int, db: Session = Depends(db_dependency), current_user: User = Depends(get_current_user)):
     comment = db.query(Comment).filter(Comment.id == comment_id).first()
     if not comment:
         raise HTTPException(status_code=404, detail="Comment not found")

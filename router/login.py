@@ -1,9 +1,5 @@
 from .basic_import import *
 from models.users import User
-from typing import Optional
-from fastapi import Depends, HTTPException
-import bcrypt
-from pydantic import BaseModel
 
 router = APIRouter()
 

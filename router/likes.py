@@ -1,10 +1,6 @@
 from .basic_import import *
 from models.likes import PostLike
 from models.posts import Post
-from typing import List, Optional
-from fastapi import Body
-import bcrypt
-from pydantic import BaseModel
 from router.notification import notify_like
 
 router = APIRouter()
@@ -15,7 +11,7 @@ class LikeRequest(BaseModel):
 
 
 @router.post("/posts/{post_id}/like/")
-async def like_post(post_id: int, request: LikeRequest, db: Session = Depends(db_dependency)):
+async def like_post(post_id: int, request: LikeRequest, db: Session = Depends(db_dependency), current_user: User = Depends(get_current_user)):
     post = db.query(Post).filter(Post.id == post_id).first()
     if not post:
         raise HTTPException(status_code=404, detail="Post not found")
@@ -31,6 +27,7 @@ async def like_post(post_id: int, request: LikeRequest, db: Session = Depends(db
 
     # ✅ Add new like
     like = PostLike(post_id=post_id, user_id=request.user_id)
+    print(like,"kkk")
     db.add(like)
     db.commit()
     db.refresh(like)
@@ -41,7 +38,7 @@ async def like_post(post_id: int, request: LikeRequest, db: Session = Depends(db
 
 
 @router.delete("/posts/{post_id}/unlike/{user_id}/")
-async def unlike_post(post_id: int, user_id: int, db: Session = Depends(db_dependency)):
+async def unlike_post(post_id: int, user_id: int, db: Session = Depends(db_dependency), current_user: User = Depends(get_current_user)):
     like = db.query(PostLike).filter(
         PostLike.post_id == post_id,
         PostLike.user_id == user_id
@@ -54,7 +51,7 @@ async def unlike_post(post_id: int, user_id: int, db: Session = Depends(db_depen
     return {"message": "Post unliked successfully"}
 
 @router.get("/posts/{post_id}/likes/")
-async def get_post_likes(post_id: int, db: Session = Depends(db_dependency)):
+async def get_post_likes(post_id: int, db: Session = Depends(db_dependency), current_user: User = Depends(get_current_user)):
     likes = db.query(PostLike).filter(PostLike.post_id == post_id).all()
     return {
         "post_id": post_id,

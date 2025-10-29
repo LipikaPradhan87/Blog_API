@@ -2,23 +2,19 @@ from .basic_import import *
 from models.tags import Tag
 from models.post_tags import Post_tag
 from models.posts import Post
-from typing import List, Optional
-from fastapi import Body
-import bcrypt
-from pydantic import BaseModel
 
 
 router = APIRouter()
 
 @router.get("/tags/used/")
-async def get_used_tags(db: Session = Depends(db_dependency)):
+async def get_used_tags(db: Session = Depends(db_dependency), current_user: User = Depends(get_current_user)):
     tags = (
         db.query(Tag)
         .join(Post_tag, Tag.id == Post_tag.tagId).distinct().all())
     return jsonable_encoder(tags)
 
 @router.get("/tags/used-count/")
-async def get_used_tags_with_count(db: Session = Depends(db_dependency)):
+async def get_used_tags_with_count(db: Session = Depends(db_dependency), current_user: User = Depends(get_current_user)):
     results = (
         db.query(Tag.id, Tag.name, func.count(Post_tag.id).label("post_count"))
         .join(Post_tag, Tag.id == Post_tag.tagId)
@@ -28,14 +24,14 @@ async def get_used_tags_with_count(db: Session = Depends(db_dependency)):
 
 
 @router.get("/posts/{post_id}/tags/")
-async def get_post_tags(post_id: int, db: Session = Depends(db_dependency)):
+async def get_post_tags(post_id: int, db: Session = Depends(db_dependency), current_user: User = Depends(get_current_user)):
     post = db.query(Post).filter(Post.id == post_id).first()
     if not post:
         raise HTTPException(status_code=404, detail="Post not found")
     return [tag.name for tag in post.tags]
 
 @router.get("/posts/by-tag-name/{tag_name}")
-async def get_posts_by_tag_name(tag_name: str, db: Session = Depends(db_dependency)):
+async def get_posts_by_tag_name(tag_name: str, db: Session = Depends(db_dependency), current_user: User = Depends(get_current_user)):
     try:
         # Find tag by name (case-insensitive)
         tag = db.query(Tag).filter(Tag.name.ilike(tag_name)).first()

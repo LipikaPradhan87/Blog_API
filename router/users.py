@@ -1,9 +1,5 @@
 from .basic_import import *
 from models.users import User
-from typing import List, Optional
-from fastapi import Body
-import bcrypt
-from pydantic import BaseModel
 
 
 router = APIRouter()
@@ -30,7 +26,7 @@ def hash_password(password: str) -> str:
     return hashed.decode('utf-8') 
     
 @router.post("/create-user/")
-async def create_user(user: UserBase, db: Session = Depends(db_dependency)):
+async def create_user(user: UserBase, db: Session = Depends(db_dependency), current_user: User = Depends(get_current_user)):
     try:
         user.password_hash = hash_password(user.password_hash)
         data = User(
@@ -60,7 +56,7 @@ async def get_users_by_id(user_id: int, db: Session = Depends(db_dependency)):
     return jsonable_encoder(data)  
 
 @router.delete("/delete-user/{user_id}")
-async def delete_user(user_id: int, db: Session = Depends(db_dependency)):
+async def delete_user(user_id: int, db: Session = Depends(db_dependency),current_user: User = Depends(get_current_user)):
     try:
         userData = db.query(User).filter(User.id == user_id).first()
         if not userData:
@@ -73,7 +69,7 @@ async def delete_user(user_id: int, db: Session = Depends(db_dependency)):
         raise raise_exception(500, f"Internal Server Error: {e}")
     
 @router.put("/update-user/{user_id}")
-async def update_user(user_id: int, request: UpdateUserRequest, db: Session = Depends(db_dependency)):
+async def update_user(user_id: int, request: UpdateUserRequest, db: Session = Depends(db_dependency), current_user: User = Depends(get_current_user)):
     try:
         user = db.query(User).filter(User.id == user_id).first()
         if not user:

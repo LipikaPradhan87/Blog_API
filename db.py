@@ -7,7 +7,7 @@ DATABASE_URL = "mssql+pyodbc://sa:1234@localhost/ThoughtNest?driver=ODBC+Driver+
 engine = create_engine(DATABASE_URL, connect_args={"driver": "ODBC Driver 17 for SQL Server"})
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
-BASE = declarative_base()  
+Base = declarative_base()  
 
 def db_dependency():
     db = SessionLocal()

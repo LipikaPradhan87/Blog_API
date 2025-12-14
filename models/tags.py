@@ -1,9 +1,10 @@
 from .basic_import import *
 
-class Tag(BASE):
+class Tag(Base):
     __tablename__ = "tags"
 
-    id = Column(Integer, primary_key=True, index=True)
-    name = Column(String(50), unique=True, nullable=False)
+    id = Column(Integer, primary_key=True)
+    name = Column(String(100), nullable=False)
+    slug = Column(String(150), unique=True, nullable=False)
 
-    posts = relationship("Post", secondary="post_tags", back_populates="tags")
+    posts = relationship("PostTag", back_populates="tag", cascade="all, delete")

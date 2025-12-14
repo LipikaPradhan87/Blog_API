@@ -18,11 +18,12 @@ ALGORITHM = "HS256"
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/Auth/token")
 
 
-def create_access_token(data: dict, expires_minutes: int = 60):
+def create_access_token(data: dict, expires_minutes: int = 1440):  # default 24 hours
     to_encode = data.copy()
     expire = datetime.utcnow() + timedelta(minutes=expires_minutes)
     to_encode.update({"exp": expire})
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+
 
 
 def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(db_dependency)):

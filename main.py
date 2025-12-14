@@ -1,11 +1,20 @@
 from fastapi.middleware.cors import CORSMiddleware
-from router import users,login, post, categories, tags, post_tags, comments, likes, notification, auth_routes
+from router import users,login, post, categories, tags, post_tags, comments, likes, notification, auth_routes, savedPost,views, loginActivity
 from fastapi import FastAPI, Request
 import os
 from datetime import datetime, timedelta
+import models  # this line imports all models and registers them with Base
+from db import Base, engine
+
+Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="ThoughtNest",description="A nest for your thoughts")
-
+origins = [
+    "http://localhost:5173",  # The origin of your frontend application
+    "http://localhost:3000",
+    # "https://your-production-frontend.com",
+    # You can add more specific origins here
+]
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -68,4 +77,19 @@ app.include_router(
     notification.router,
     prefix="/Notification",
     tags=["Notification"]
+)
+app.include_router(
+    savedPost.router,
+    prefix="/SavedPost",
+    tags=["SavedPost"]
+)
+app.include_router(
+    views.router,
+    prefix="/Views",
+    tags=["Views"]
+)
+app.include_router(
+    loginActivity.router,
+    prefix="/LoginActivity",
+    tags=["LoginActivity"]
 )

@@ -1,18 +1,19 @@
 from .basic_import import *
 
-class Notification(BASE):
+class Notification(Base):
     __tablename__ = "notifications"
 
-    id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"))  # Who will receive the notification
-    actor_id = Column(Integer, ForeignKey("users.id")) # Who performed the action (author, liker, commenter)
-    type = Column(String(50), nullable=False)  # 'post', 'like', 'comment'
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey("users.id"))  # recipient
+    sender_id = Column(Integer, ForeignKey("users.id"), nullable=True)  # who triggered it
     post_id = Column(Integer, ForeignKey("posts.id"), nullable=True)
-    comment_id = Column(Integer, ForeignKey("comments.id"), nullable=True)
-    is_read = Column(Boolean, default=False)
+    comment_id = Column(Integer, ForeignKey("comments.id", ondelete="SET NULL"), nullable=True)
+    message = Column(Text, nullable=False)
+    is_read = Column(Integer, default=0)  # 0 = unread, 1 = read
     created_at = Column(DateTime, default=datetime.utcnow)
 
+    # Relationships
     user = relationship("User", foreign_keys=[user_id])
-    actor = relationship("User", foreign_keys=[actor_id])
+    sender = relationship("User", foreign_keys=[sender_id])
     post = relationship("Post")
     comment = relationship("Comment")

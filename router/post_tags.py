@@ -1,67 +1,98 @@
 from .basic_import import *
 from models.tags import Tag
-from models.post_tags import Post_tag
+from models.post_tags import PostTag
 from models.posts import Post
+from models.users import User
+from router.auth import get_current_user
 
 
 router = APIRouter()
 
+
+# 1️⃣ Get all tags that are used in posts
 @router.get("/tags/used/")
-async def get_used_tags(db: Session = Depends(db_dependency), current_user: User = Depends(get_current_user)):
+async def get_used_tags(
+    db: Session = Depends(db_dependency),
+    current_user: User = Depends(get_current_user)
+):
     tags = (
         db.query(Tag)
-        .join(Post_tag, Tag.id == Post_tag.tagId).distinct().all())
+        .join(PostTag, Tag.id == PostTag.tag_id)
+        .distinct()
+        .all()
+    )
     return jsonable_encoder(tags)
 
+
+# 2️⃣ Get tags with their usage count
 @router.get("/tags/used-count/")
-async def get_used_tags_with_count(db: Session = Depends(db_dependency), current_user: User = Depends(get_current_user)):
+async def get_used_tags_with_count(
+    db: Session = Depends(db_dependency),
+    current_user: User = Depends(get_current_user)
+):
     results = (
-        db.query(Tag.id, Tag.name, func.count(Post_tag.id).label("post_count"))
-        .join(Post_tag, Tag.id == Post_tag.tagId)
-        .group_by(Tag.id, Tag.name).all()
+        db.query(Tag.id, Tag.name, func.count(PostTag.post_id).label("post_count"))
+        .join(PostTag, Tag.id == PostTag.tag_id)
+        .group_by(Tag.id, Tag.name)
+        .all()
     )
-    return [{"id": r.id, "name": r.name, "post_count": r.post_count} for r in results]
+    return [
+        {"id": r.id, "name": r.name, "post_count": r.post_count}
+        for r in results
+    ]
 
 
+# 3️⃣ Get tags for a specific post
 @router.get("/posts/{post_id}/tags/")
-async def get_post_tags(post_id: int, db: Session = Depends(db_dependency), current_user: User = Depends(get_current_user)):
+async def get_post_tags(
+    post_id: int,
+    db: Session = Depends(db_dependency),
+    current_user: User = Depends(get_current_user)
+):
     post = db.query(Post).filter(Post.id == post_id).first()
     if not post:
         raise HTTPException(status_code=404, detail="Post not found")
-    return [tag.name for tag in post.tags]
 
+    # post.tags is a list of PostTag objects
+    return [pt.tag.name for pt in post.tags]
+
+
+# 4️⃣ Get all posts for a given tag name
 @router.get("/posts/by-tag-name/{tag_name}")
-async def get_posts_by_tag_name(tag_name: str, db: Session = Depends(db_dependency), current_user: User = Depends(get_current_user)):
+async def get_posts_by_tag_name(
+    tag_name: str,
+    db: Session = Depends(db_dependency),
+    current_user: User = Depends(get_current_user)
+):
     try:
-        # Find tag by name (case-insensitive)
         tag = db.query(Tag).filter(Tag.name.ilike(tag_name)).first()
         if not tag:
             raise HTTPException(status_code=404, detail="Tag not found")
 
-        # Explicitly join posts via association table to avoid lazy loading issues
+        # Join through PostTag to get related posts
         posts = (
             db.query(Post)
-            .join(Post.tags)
-            .filter(Tag.id == tag.id)
+            .join(PostTag, Post.id == PostTag.post_id)
+            .filter(PostTag.tag_id == tag.id)
             .all()
         )
 
         if not posts:
             return {"tag": tag.name, "posts": []}
 
-        # Format the response
         result = [
             {
                 "id": post.id,
                 "title": post.title,
+                "slug": post.slug,
                 "content": post.content,
-                "image": post.image,
+                "cover_image": post.cover_image,
                 "author": post.author.username if post.author else None,
                 "category": post.category.name if post.category else None,
                 "created_at": post.created_at,
-                "tags": [t.name for t in post.tags],
+                "tags": [t.tag.name for t in post.tags],
                 "likes_count": len(post.likes),
-                "comments_count": len(post.comments)
+                "comments_count": len(post.comments),
             }
             for post in posts
         ]
@@ -70,4 +101,3 @@ async def get_posts_by_tag_name(tag_name: str, db: Session = Depends(db_dependen
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-

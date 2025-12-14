@@ -1,11 +1,12 @@
 from .basic_import import *
 
-class Category(BASE):
+class Category(Base):
     __tablename__ = "categories"
 
-    id = Column(Integer, primary_key=True, index=True)
-    name = Column(String(100), unique=True, nullable=False)
-    description = Column(Text)
-    image = Column(String(255), nullable=True)   # <-- new field
+    id = Column(Integer, primary_key=True)
+    name = Column(String(100), nullable=False)
+    slug = Column(String(150), unique=True, nullable=False)
+    description = Column(Text, nullable=True)
 
-    posts = relationship("Post", back_populates="category")
+    posts = relationship("Post", back_populates="category", cascade="all, delete")
+

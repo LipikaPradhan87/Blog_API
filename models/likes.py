@@ -1,14 +1,12 @@
 from .basic_import import *
 
-class PostLike(BASE):
-    __tablename__ = "post_likes"
+class Like(Base):
+    __tablename__ = "likes"
 
-    id = Column(Integer, primary_key=True, index=True)
-    post_id = Column(Integer, ForeignKey("posts.id"), nullable=False)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    id = Column(Integer, primary_key=True)
+    post_id = Column(Integer, ForeignKey("posts.id", ondelete="NO ACTION"))
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"))
     created_at = Column(DateTime, default=datetime.utcnow)
 
-    # post = relationship("Post", backref="likes")
-    user = relationship("User", backref="likes")
     post = relationship("Post", back_populates="likes")
-    __table_args__ = (UniqueConstraint("post_id", "user_id", name="uix_post_user"),)
+    user = relationship("User", back_populates="likes")

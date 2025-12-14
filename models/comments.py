@@ -1,4 +1,5 @@
 from .basic_import import *
+from sqlalchemy.orm import relationship, backref
 
 class Comment(Base):
     __tablename__ = "comments"
@@ -15,6 +16,7 @@ class Comment(Base):
     user = relationship("User", back_populates="comments")
     replies = relationship(
         "Comment",
-        backref="parent",
-        remote_side=[id]
+        backref=backref("parent", remote_side=[id]),
+        cascade="all, delete-orphan",
+        lazy="selectin"   # IMPORTANT
     )

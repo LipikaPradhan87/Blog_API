@@ -21,6 +21,7 @@ from fastapi import Request
 from models.users import User
 from .auth import get_current_user
 import random
+from sqlalchemy.exc import IntegrityError
 
 def raise_exception(error_code:int=None,msg:str=None):
     raise HTTPException(status_code=error_code,detail=jsonable_encoder(msg))

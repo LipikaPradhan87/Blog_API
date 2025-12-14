@@ -114,6 +114,7 @@ async def get_all_posts(db: Session = Depends(db_dependency),current_user: User 
         result.append({
             "post": jsonable_encoder(post),
             "author_name": author.username if author else None,
+            "author_image": author.profile_image if author else None,
             "stats": {
                 "like_count": like_count,
                 "comment_count": comment_count,
@@ -176,6 +177,7 @@ async def get_posts_by_status(status: str,db: Session = Depends(db_dependency),c
         result.append({
             "post": jsonable_encoder(post),
             "author_name": author.username if author else None,
+            "author_image": author.profile_image if author else None,            
             "stats": {
                 "like_count": like_count,
                 "comment_count": comment_count,
@@ -226,6 +228,7 @@ async def get_all_posts_by_status_and_user(
         return {
             "post": jsonable_encoder(post),
             "author_name": author.username if author else None,
+            "author_image": author.profile_image if author else None,
             "stats": {
                 "like_count": like_count,
                 "comment_count": comment_count,
@@ -269,6 +272,7 @@ async def get_saved_posts(user_id: int, db: Session = Depends(db_dependency)):
         result.append({
             "post": jsonable_encoder(post),
             "author_name": author.username if author else None,
+            "author_image": author.profile_image if author else None,
             "stats": {
                 "like_count": like_count,
                 "comment_count": comment_count,
@@ -329,6 +333,7 @@ async def get_post_by_id(post_id: int, db: Session = Depends(db_dependency), cur
     return {
         "post": jsonable_encoder(post),
         "author_name": author.username if author else None,
+        "author_image": author.profile_image if author else None,        
         "tags": tags,         # <---- TAGS ADDED HERE
         "tag_ids": [t["id"] for t in tags], 
         "stats": {
@@ -348,6 +353,22 @@ async def get_post_by_id(post_id: int, db: Session = Depends(db_dependency), cur
 # ==============================
 # Update Post
 # ==============================
+
+def generate_unique_slug(db: Session, title: str, post_id: int):
+    base_slug = slugify(title)
+    slug = base_slug
+    counter = 1
+
+    while (
+        db.query(Post)
+        .filter(Post.slug == slug, Post.id != post_id)
+        .first()
+    ):
+        slug = f"{base_slug}-{counter}"
+        counter += 1
+
+    return slug
+
 @router.put("/update-posts/{post_id}/")
 async def update_post(
     post_id: int,
@@ -364,43 +385,46 @@ async def update_post(
     if not post:
         raise HTTPException(status_code=404, detail="Post not found")
 
-    # ========== Update Normal Fields ==========
-    if title is not None:
-        post.title = title
-        post.slug = slugify(title)
+    try:
+        # ===== Update fields =====
+        if title is not None:
+            post.title = title
+            post.slug = generate_unique_slug(db, title, post_id)
 
-    if content is not None:
-        post.content = content
+        if content is not None:
+            post.content = content
 
-    if category_id is not None:
-        post.category_id = category_id
+        if category_id is not None:
+            post.category_id = category_id
 
-    if status is not None:
-        post.status = status
-        if status == "published":
-            post.published_at = datetime.utcnow()
+        if status is not None:
+            post.status = status
+            if status == "published":
+                post.published_at = datetime.utcnow()
 
-    # ========== Update Cover Image ==========
-    if cover_image:
-        file_bytes = await cover_image.read()
-        base64_image = base64.b64encode(file_bytes).decode("utf-8")
-        post.cover_image = base64_image
+        if cover_image:
+            file_bytes = await cover_image.read()
+            post.cover_image = base64.b64encode(file_bytes).decode("utf-8")
 
-    # ========== Update Tags ==========
-    if tag_ids is not None:
-        # Clear existing tags
-        db.query(PostTag).filter(PostTag.post_id == post_id).delete()
-        # Insert new tags
-        for tag in tag_ids:
-            db.add(PostTag(post_id=post_id, tag_id=tag))
+        if tag_ids is not None:
+            db.query(PostTag).filter(PostTag.post_id == post_id).delete()
+            for tag in tag_ids:
+                db.add(PostTag(post_id=post_id, tag_id=tag))
 
-    db.commit()
-    db.refresh(post)
+        db.commit()
+        db.refresh(post)
 
-    return {
-        "message": "Post updated successfully",
-        "post": jsonable_encoder(post)
-    }
+        return {
+            "message": "Post updated successfully",
+            "post": jsonable_encoder(post),
+        }
+
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(
+            status_code=409,
+            detail="A post with this title already exists. Please choose a different title."
+        )
 
 # ==============================
 # Delete Post

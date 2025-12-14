@@ -34,24 +34,30 @@ async def add_comment(
     if not post:
         raise HTTPException(status_code=404, detail="Post not found")
 
-    # If replying to another comment, validate parent exists
-    if request.parent_id:
-        parent = db.query(Comment).filter(Comment.id == request.parent_id).first()
+    parent_id = None
+
+    # Validate parent comment ONLY if it's a reply
+    if request.parent_id is not None and request.parent_id != 0:
+        parent = (
+            db.query(Comment)
+            .filter(Comment.id == request.parent_id, Comment.post_id == post_id)
+            .first()
+        )
         if not parent:
             raise HTTPException(status_code=404, detail="Parent comment not found")
-    parent_id = request.parent_id if request.parent_id not in [0, "0"] else None
+        parent_id = request.parent_id
 
     comment = Comment(
         post_id=post_id,
         user_id=current_user.id,
         content=request.content,
-        parent_id=parent_id,
+        parent_id=parent_id,   # ALWAYS NULL for top-level
     )
+
     db.add(comment)
     db.commit()
     db.refresh(comment)
 
-    # Notify post owner
     notify_comment(comment, db)
 
     return {
@@ -66,7 +72,12 @@ async def add_comment(
 # ==============================
 def serialize_comment(comment: Comment):
     replies = comment.replies or []
-    sorted_replies = sorted(replies, key=lambda r: r.created_at)
+
+    # Safe sort even if created_at is missing
+    sorted_replies = sorted(
+        replies,
+        key=lambda r: r.created_at or datetime.min
+    )
 
     return {
         "id": comment.id,
@@ -78,22 +89,24 @@ def serialize_comment(comment: Comment):
         "replies": [serialize_comment(r) for r in sorted_replies],
     }
 
-
 @router.get("/posts/{post_id}/comments/")
 async def get_comments(post_id: int, db: Session = Depends(db_dependency)):
     post = db.query(Post).filter(Post.id == post_id).first()
     if not post:
         raise HTTPException(status_code=404, detail="Post not found")
 
-    # Only fetch top-level comments
     comments = (
         db.query(Comment)
-        .filter(Comment.post_id == post_id, Comment.parent_id.is_(None))
+        .filter(
+            Comment.post_id == post_id,
+            Comment.parent_id.is_(None)
+        )
         .order_by(Comment.created_at.desc())
         .all()
     )
 
     return [serialize_comment(c) for c in comments]
+
 
 @router.get("/comment-by-id/{comment_id}")
 async def get_comment_by_id( comment_id: int,db: Session = Depends(db_dependency), current_user: User = Depends(get_current_user)):

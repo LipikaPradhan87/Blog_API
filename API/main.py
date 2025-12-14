@@ -6,7 +6,6 @@ from datetime import datetime, timedelta
 import models  # this line imports all models and registers them with Base
 from db import Base, engine
 from mangum import Mangum
-
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="ThoughtNest",description="A nest for your thoughts")

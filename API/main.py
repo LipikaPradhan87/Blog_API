@@ -5,6 +5,7 @@ import os
 from datetime import datetime, timedelta
 import models  # this line imports all models and registers them with Base
 from db import Base, engine
+from mangum import Mangum
 
 Base.metadata.create_all(bind=engine)
 
@@ -24,8 +25,9 @@ app.add_middleware(
 )
 
 @app.get("/")
-async def home():
+async def root():
     return {"message": "Welcome to ThoughtNest API"}
+handler = Mangum(app) 
 
 app.include_router(
     auth_routes.router,
